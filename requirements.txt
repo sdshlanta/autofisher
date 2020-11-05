@@ -1,0 +1,4 @@
+pyautogui
+python-cv2
+mss
+vidgear
