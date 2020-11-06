@@ -12,6 +12,9 @@ from vidgear.gears import ScreenGear
 holdoff_good = True
 running = True
 
+def cast():
+    pyautogui.click(button='right')
+
 def holdoff_good_callback():
     global holdoff_good
     holdoff_good = True
@@ -68,8 +71,8 @@ def main():
 
             if frame_sum == 0 :
                 Timer(args.delay, holdoff_good_callback).start()
+                Timer(args.recast, cast).start()
                 holdoff_good = False
-                pyautogui.click(button='right')
                 pyautogui.click(button='right')
 
         # Show output window if we are in debug mode
@@ -154,6 +157,12 @@ if __name__ == "__main__":
              'your surroundings',
         type=int,
         default=100
+    )
+    parser.add_argument('-r', '--recast',
+        help='The delay in seconds between realing the rod in and casting it '
+             'again in seconds.  Defaults to 1.0',
+        type=float,
+        default=1.0
     )
 
     args = parser.parse_args()
