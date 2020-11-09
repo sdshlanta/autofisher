@@ -1,4 +1,4 @@
 pyautogui
-python-cv2
+opencv-python
 mss
 vidgear
