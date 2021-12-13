@@ -3,8 +3,13 @@ import argparse
 import signal
 from threading import Timer
 from time import time
+from pprint import pprint
+
 
 import cv2
+import numpy as np
+from numpy.core.fromnumeric import std
+from numpy.lib.function_base import average
 import pyautogui
 from vidgear.gears import ScreenGear
 
@@ -47,6 +52,8 @@ def main():
     # try/except with KeyboardInterrupt
     signal.signal(signal.SIGINT, signal_handler)
 
+    catch_times = []    
+    previous_catch = time()
     # Loop until ctrl + c is pressed
     while running:
         # read frames from stream
@@ -57,11 +64,12 @@ def main():
             print('Error grabing frame data! Exiting.')
             break
 
+  
         # Knock out the color from the image to make thresholding easier
+        frame[:,:,0] = np.zeros([frame.shape[0], frame.shape[1]])
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # Set all pixles dimmer than args.threshold to 0
         _, frame = cv2.threshold(frame, args.threshold, 255, cv2.THRESH_BINARY)
-
         # If we are still inside the holdoff period we skip the frame summing
         # and checking
         if holdoff_good:
@@ -71,17 +79,29 @@ def main():
 
             if frame_sum == 0 :
                 Timer(args.delay, holdoff_good_callback).start()
-                Timer(args.recast, cast).start()
+                if not args.debug:
+                    Timer(args.recast, cast).start()
                 holdoff_good = False
-                pyautogui.click(button='right')
+
+                if args.debug:
+                    print('Caught!')
+                else:
+                    pyautogui.click(button='right')
+
+                cur_catch = time()
+                catch_times.append(cur_catch - previous_catch)
+                previous_catch = cur_catch
+                
+                print(f'Total Catches {len(catch_times)}, Avg Catch Time: {round(average(catch_times), 5)}, STD: {round(std(catch_times), 5)}, Min: {round(min(catch_times), 5)}, Max: {round(max(catch_times), 5)}', end='\r')
 
         # Show output window if we are in debug mode
-        if args.debug:
+        if args.debug or args.show:
             cv2.imshow("Output Frame", frame)
 
             # check for 'q' key if pressed
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
+                print('')
                 break
 
     # close output window
@@ -100,8 +120,9 @@ if __name__ == "__main__":
                     'fishing rod already cast.'
     )
     parser.add_argument('--debug',
-        help='Show the captured region of the screen after thresholding '
-             'and RGB->BW color cut.  Useful for debugging undesired casts.',
+        help='Disable casting of rod and show the captured region of the screen'
+             ' after thresholding and RGB->BW color cut.  Useful for debugging'
+            ' undesired casts.',
         action='store_true'
     )
     parser.add_argument('-t', '--threshold',
@@ -109,7 +130,7 @@ if __name__ == "__main__":
              'will be set to 0.  Will likely need to be adjusted based on '
              'background content of scene.  Defaults to 150 out of 255',
         type=int,
-        default=150,
+        default=127,
         choices=range(0,256),
         metavar="[0-255]"
     )
@@ -156,13 +177,19 @@ if __name__ == "__main__":
              'value may require fiddling depending on how you are casting and '
              'your surroundings',
         type=int,
-        default=100
+        default=200
     )
     parser.add_argument('-r', '--recast',
         help='The delay in seconds between realing the rod in and casting it '
              'again in seconds.  Defaults to 1.0',
         type=float,
         default=1.0
+    )
+    parser.add_argument('-s', '--show',
+        help='Show the output window after thresholding and RGB->BW color '
+             'cut.  Useful for debugging undesired casts.',
+        action='store_true',
+        default=False
     )
 
     args = parser.parse_args()
