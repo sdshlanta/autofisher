@@ -2,3 +2,4 @@ pyautogui
 opencv-python
 mss
 vidgear
+numpy
